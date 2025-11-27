@@ -61,10 +61,10 @@
         const statusTextEl = document.getElementById('status-text');
         const lastScannedDataEl = document.getElementById('last-scanned-data');
 
-        // Initialize the scanner
+        // Initialize the scanner with improved parameters
         const scanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 }, 
+            fps: 20, // Increased FPS for faster capture
+            qrbox: { width: 300, height: 300 }, // Slightly larger scan box
             // Setting disableFlip to false improves mobile camera support
             disableFlip: false 
         });
@@ -75,8 +75,8 @@
             Html5Qrcode.getCameras().then(cameras => {
                 if (cameras && cameras.length) {
                     // Try to stop the active scanner
-                    const html5QrcodeScanner = Html5Qrcode.getCameras()[0].label;
-                    scanner.clear();
+                    // Note: scanner.clear() is the correct way to stop the scanner.
+                    scanner.clear().catch(err => console.log("Failed to stop scanner:", err));
                 }
             }).catch(err => {
                  // Ignore if stopping fails, just proceed
@@ -105,8 +105,11 @@
 
             // 3. Restart the scanner after a short delay to allow visual feedback
             setTimeout(() => {
-                scanner.render(onScanSuccess);
-                setStatus('Scan a code...', 'bg-white text-gray-600', '---');
+                // Only render if the scanner is not currently running
+                if (!scanner.isScanning) {
+                    scanner.render(onScanSuccess);
+                    setStatus('Scan a code...', 'bg-white text-gray-600', '---');
+                }
             }, 3000); // 3-second pause
         }
 
