@@ -1,106 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Event Check-In Scanner</title>
+    <title>Bolder Event Check-In Scanner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Load Inter font for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS for modern, responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind configuration for custom colors and fonts
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#10b981', // Emerald green
+                        'secondary': '#f97316', // Orange
+                    }
+                }
+            }
+        }
+    </script>
     <!-- QR Code Scanning Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         /* Custom styles to ensure the video feed is centered and responsive */
-        #reader { 
-            width: 100%; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            border-radius: 1rem; /* Rounded corners for the scanner */
-            overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-        /* Ensure the body takes full viewport height for centering */
         body { 
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #f7f9fb;
-            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light gray background */
+        }
+        #reader { 
+            width: 100%; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            border-radius: 1.5rem; /* Larger rounded corners */
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2); /* Deeper shadow */
+            border: 4px solid #10b981; /* Primary color border */
+        }
+        /* Specific styling for the status message area */
+        .status-box {
+            transition: all 0.4s ease-in-out;
+            border-left: 8px solid;
         }
     </style>
 </head>
 <body class="p-4">
     
     <div class="max-w-xl w-full">
-        <h1 class="text-4xl font-extrabold text-gray-800 mb-6 text-center">
-            Event Check-In
+        <h1 class="text-5xl font-extrabold text-gray-900 mb-8 text-center tracking-tight">
+            <span class="text-primary">E</span>vent <span class="text-primary">Check</span>-In
         </h1>
 
         <!-- QR Code Reader Container -->
-        <div id="reader" class="mb-6"></div>
+        <div id="reader" class="mb-8"></div>
 
-        <!-- Result/Status Display Area -->
-        <div id="status-message" class="p-4 rounded-xl shadow-lg bg-white transition-all duration-300">
-            <p class="text-gray-600 font-medium" id="status-text">
-                <span class="text-blue-500">Awaiting scan...</span>
+        <!-- Result/Status Display Area - Bolder and more informative -->
+        <div id="status-message" class="status-box p-6 rounded-2xl shadow-xl bg-white border-primary border-opacity-50">
+            <p class="text-xl font-bold text-gray-700" id="status-text">
+                <span class="text-blue-500">Awaiting connection...</span>
             </p>
         </div>
 
-        <!-- Last Scanned Data Display -->
-        <div class="mt-4 p-3 rounded-lg bg-gray-100 text-left">
-            <p class="text-sm text-gray-500 font-semibold">Last Scanned Data:</p>
-            <p class="text-gray-800 break-all text-sm" id="last-scanned-data">---</p>
+        <!-- Last Scanned Data Display - Clearer separation -->
+        <div class="mt-6 p-4 rounded-xl bg-white shadow-md text-left border border-gray-200">
+            <p class="text-sm text-gray-500 font-semibold mb-1">Last Scanned ID:</p>
+            <p class="text-lg font-mono text-gray-900 break-all" id="last-scanned-data">---</p>
         </div>
     </div>
 
     <script>
-        // CRITICAL: Replace this with your actual Google Apps Script Web App URL
+        // CRITICAL: Your Google Apps Script Web App URL
         const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyvq2U2ywwPoF-_-vk-2D0NqStP5i81v1YvoltfiJ1tpNfayv8gUIC1RjqOz0Xrs93aiQ/exec";
         
         const statusMessageEl = document.getElementById('status-message');
         const statusTextEl = document.getElementById('status-text');
         const lastScannedDataEl = document.getElementById('last-scanned-data');
 
-        // Initialize the scanner with improved parameters
+        // Initialize the scanner with improved parameters (kept from last version)
         const scanner = new Html5QrcodeScanner("reader", { 
             fps: 20, // Increased FPS for faster capture
             qrbox: { width: 300, height: 300 }, // Slightly larger scan box
-            // Setting disableFlip to false improves mobile camera support
             disableFlip: false 
         });
 
         // Function to handle successful QR code scan
         async function onScanSuccess(decodedText, decodedResult) {
-            // 1. Stop the scanning camera to prevent multiple rapid scans
-            Html5Qrcode.getCameras().then(cameras => {
-                if (cameras && cameras.length) {
-                    // Try to stop the active scanner
-                    // Note: scanner.clear() is the correct way to stop the scanner.
-                    scanner.clear().catch(err => console.log("Failed to stop scanner:", err));
-                }
-            }).catch(err => {
-                 // Ignore if stopping fails, just proceed
-            });
+            // Immediately stop scanning to prevent duplicate triggers
+            scanner.clear().catch(err => console.error("Failed to stop scanner:", err));
             
 
             // Update UI to show we are processing
-            setStatus('Sending data...', 'bg-yellow-100 text-yellow-700', decodedText);
+            setStatus('Sending data...', 'bg-yellow-50 text-yellow-800 border-yellow-500', decodedText);
 
             // 2. Send the data to the Google Sheet Webhook
             try {
                 const response = await sendDataToSheet(decodedText);
                 
                 if (response.result === "SUCCESS") {
-                    setStatus('✅ Check-In Successful!', 'bg-green-100 text-green-700', decodedText);
+                    // Bold Green for Success
+                    setStatus('✅ CHECK-IN SUCCESSFUL!', 'bg-green-100 text-green-800 border-green-600', decodedText);
                 } else {
-                    // If the script returned an ERROR result
-                    setStatus(`❌ Error: ${response.message || 'Logging failed.'}`, 'bg-red-100 text-red-700', decodedText);
+                    // Bold Red for Error
+                    setStatus(`❌ LOGGING FAILED: ${response.message || 'Unknown server error.'}`, 'bg-red-100 text-red-800 border-red-600', decodedText);
                 }
 
             } catch (error) {
-                // If the network request itself failed (e.g., no internet, bad URL)
+                // Critical Network Error
                 console.error("Network or Fetch Error:", error);
-                setStatus('🚨 Critical Error: Could not connect to server.', 'bg-red-100 text-red-700', decodedText);
+                setStatus('🚨 CONNECTION ERROR: Check internet/URL.', 'bg-gray-200 text-red-900 border-red-900', decodedText);
             }
 
             // 3. Restart the scanner after a short delay to allow visual feedback
@@ -108,17 +122,18 @@
                 // Only render if the scanner is not currently running
                 if (!scanner.isScanning) {
                     scanner.render(onScanSuccess);
-                    setStatus('Scan a code...', 'bg-white text-gray-600', '---');
+                    setStatus('Scan an Attendee QR Code', 'bg-white text-gray-700 border-primary', '---');
                 }
-            }, 3000); // 3-second pause
+            }, 4000); // 4-second pause for better viewing of status
         }
 
         // Helper function to update the status UI
         function setStatus(text, bgColorClass, scannedData) {
-            // Reset classes
-            statusMessageEl.className = 'p-4 rounded-xl shadow-lg transition-all duration-300';
-            // Set new background and text color
-            statusMessageEl.classList.add(bgColorClass.split(' ')[0], bgColorClass.split(' ')[1]);
+            // The class format is: [BG Color] [Text Color] [Border Color]
+            const [bg, textC, borderC] = bgColorClass.split(' ');
+            
+            // Apply classes to elements
+            statusMessageEl.className = `status-box p-6 rounded-2xl shadow-xl ${bg} ${textC} ${borderC}`;
             statusTextEl.innerText = text;
             lastScannedDataEl.innerText = scannedData;
         }
@@ -126,29 +141,48 @@
 
         // Function to send data to the Google Apps Script Webhook
         async function sendDataToSheet(qrData) {
-            const payload = {
-                qr_data: qrData // Key must match 'qr_data' used in the Google Script
-            };
-
-            const options = {
-                method: 'POST',
-                // Important: The content type must be set to JSON for the Apps Script to parse it correctly
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            };
-
-            // Using fetch to make the API call
-            const response = await fetch(WEBHOOK_URL, options);
+            // Exponential backoff mechanism for retries
+            const maxRetries = 3;
+            let delay = 1000;
             
-            // The Google Script returns a JSON object, so we parse it
-            const data = await response.json();
-            return data;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const payload = { qr_data: qrData };
+                    const options = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    };
+
+                    const response = await fetch(WEBHOOK_URL, options);
+                    
+                    if (response.ok) {
+                        return await response.json(); // Successful response from script
+                    }
+
+                } catch (error) {
+                    // Catch network errors and try again
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                        console.log(`Retry attempt ${i + 1} failed. Retrying in ${delay / 2}ms...`);
+                    } else {
+                        throw error; // Throw final error if all retries fail
+                    }
+                }
+            }
+            throw new Error("Failed to connect to the server after multiple retries.");
         }
 
         // Start the scanner when the page loads
-        scanner.render(onScanSuccess);
+        scanner.render(onScanSuccess, () => {
+            // Success callback after camera starts
+            setStatus('Scan an Attendee QR Code', 'bg-white text-gray-700 border-primary', '---');
+        }, (error) => {
+            // Error callback if camera fails to start
+            setStatus('🔴 Camera access failed. Ensure permission is granted.', 'bg-red-100 text-red-700 border-red-500', '---');
+            console.error(error);
+        });
     </script>
 </body>
 </html>
